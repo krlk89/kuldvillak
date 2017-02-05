@@ -6,28 +6,28 @@
     </head>
     
     <body>
-    <table style="width:100%">
-        %for nr, row in enumerate(rows):
-            <tr>
-            %for col in row:
-                %if nr == 0:
-                    <th><button disabled class="button" id="title">{{col[0]}}</button></th>
-                %else:
-                    %if col == "":
-                        <td><button disabled class="button" id="hidden"></button></td>
+        <table style="width:100%">
+            %for nr, row in enumerate(rows):
+                <tr>
+                %for col in row:
+                    %if nr == 0:
+                        <th><button disabled class="button" id="title">{{col[0]}}</button></th>
                     %else:
-                        <td><form action="/q" method="post">
-                            <input type="hidden" name="kys_id" value="{{col[1]}}"/>
-                            <input type="submit" class="button" id="content" value="{{col[0]}}"/>
-                        </form></td>
+                        %if col == "":
+                            <td><button disabled class="button" id="hidden"></button></td>
+                        %else:
+                            <td><form action="/q" method="post">
+                                <input type="hidden" name="kys_id" value="{{col[1]}}"/>
+                                <input type="submit" class="button" id="content" value="{{col[0]}}"/>
+                            </form></td>
+                        %end
                     %end
                 %end
+                </tr>
             %end
-            </tr>
-        %end
-    </table>
-        
-    <p>Skoor: {{skoor}}</p>
-    <a href="/">Esilehele</a>
+        </table>
+            
+        <p>Skoor: {{skoor}}</p>
+        <a href="/">Esilehele</a>
     </body>
 </html>

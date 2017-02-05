@@ -20,6 +20,9 @@ def close_connection(db, connection, commit):
 @bottle.route("/", method = ["GET", "POST"])
 def first_page():
     """Create player and game board."""
+    player_id = bottle.request.get_cookie("player")
+    print(player_id)
+    
     if bottle.request.forms.mangija1:
         db, connection = open_connection()
         
@@ -56,12 +59,18 @@ def first_page():
 
         return bottle.template("views/kuldvillak", rows = tabel, skoor = 0, hind = 0)
     
-    elif bottle.request.get_cookie("player"):
-        # if game is not finished and check if player actually exists in db
-        # greet player by name
-        # return the first page with continue game button
-        return bottle.template("views/greet", cont = True)
+    elif player_id:
+        db, connection = open_connection()
+        player_info = connection.execute("""SELECT Nimi, Lopp FROM Mangijad
+                                WHERE MangijaId = ?""", (player_id,)).fetchall()[0]
+        close_connection(db, connection, False)
         
+        if player_info[1] == 0:
+            # return the first page with continue game button
+            return bottle.template("views/greet", player_name = player_info[0], cont = True)
+        else:
+            return bottle.template("views/greet", cont = False)
+
     return bottle.template("views/greet", cont = False)
 
 @bottle.route("/kuldvillak", method = ["GET", "POST"])
@@ -129,7 +138,8 @@ def question_page():
     seis = connection.execute("""SELECT Seis FROM Mangijad
                         WHERE MangijaId = ?""", (player_id,)).fetchall()[0][0]
     seis = seis.split(";")
-    seis = ["" if x == question_id else x for x in seis]
+    q_id = seis.index(question_id)
+    seis[q_id] = ""
     seis = ";".join(seis)
     connection.execute("""UPDATE Mangijad SET Seis = ?
                 WHERE MangijaId = ?""", (seis, player_id))
