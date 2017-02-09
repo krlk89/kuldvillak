@@ -2,6 +2,7 @@
 
 import bottle
 import sqlite3
+import uuid
 
 def open_connection():
     """Open database connection."""
@@ -21,17 +22,16 @@ def close_connection(db, connection, commit):
 def first_page():
     """Create player and game board."""
     player_id = bottle.request.get_cookie("player")
-    print(player_id)
     
     if bottle.request.forms.mangija1:
         db, connection = open_connection()
         
-        tabel = []
-        
-        connection.execute("""INSERT INTO Mangijad(Nimi, Skoor, Lopp)
-                    VALUES(?, 0, 0)""", (bottle.request.forms.mangija1,)) # set default values in sqlite
-        player_id = connection.lastrowid
-        bottle.response.set_cookie("player", str(player_id), path="/")
+        tabel = []        
+        player_id = str(uuid.uuid4())
+
+        connection.execute("""INSERT INTO Mangijad(MangijaId, Nimi)
+                    VALUES(?, ?)""", (player_id, bottle.request.forms.mangija1,))
+        bottle.response.set_cookie("player", player_id, path="/")
         
         valitud_teemad = connection.execute("""SELECT Pealkiri FROM Teemad
                                     ORDER BY RANDOM() LIMIT 5""").fetchall()
@@ -81,7 +81,6 @@ def game_board():
         db, connection = open_connection()
         
         tabel = []
-        player_id = int(player_id)
         
         skoor, seis = connection.execute("""SELECT Skoor, Seis from Mangijad
                             WHERE MangijaId = ?""", (player_id,)).fetchall()[0]
@@ -130,7 +129,7 @@ def question_page():
     """Küsimuse leht"""
     db, connection = open_connection()
     
-    player_id = int(bottle.request.get_cookie("player"))
+    player_id = bottle.request.get_cookie("player")
     question_id = bottle.request.forms.kys_id
     kysimus, hind, vastus = connection.execute("""SELECT Kys, Hind, Vastus FROM Kysimused
                         WHERE KysimuseId = ?""", (int(question_id),)).fetchall()[0]
