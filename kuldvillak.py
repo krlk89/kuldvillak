@@ -28,9 +28,6 @@ def first_page():
         
         tabel = []        
         player_id = str(uuid.uuid4())
-
-        connection.execute("""INSERT INTO Mangijad(MangijaId, Nimi)
-                    VALUES(?, ?)""", (player_id, bottle.request.forms.mangija1,))
         bottle.response.set_cookie("player", player_id, path="/")
         
         valitud_teemad = connection.execute("""SELECT Pealkiri FROM Teemad
@@ -52,8 +49,8 @@ def first_page():
             tabel.append(rida)
             
         seis = ";".join(seis)
-        connection.execute("""UPDATE Mangijad SET Seis = ?
-                    WHERE MangijaId = ?""", (seis, player_id))
+        connection.execute("""INSERT INTO Mangijad(MangijaId, Nimi, Seis)
+                    VALUES(?, ?, ?)""", (player_id, bottle.request.forms.mangija1, seis))
         
         close_connection(db, connection, True)
 
@@ -77,6 +74,7 @@ def first_page():
 def game_board():
     """Kuldvillaku pealeht"""
     player_id = bottle.request.get_cookie("player")
+    
     if player_id:
         db, connection = open_connection()
         
