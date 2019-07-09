@@ -1,171 +1,170 @@
 #!/usr/bin/env python3
 
+"""
+Kuldvillaku veebimäng
+Autor: https://github.com/krlk89/kuldvillak
+"""
+
 import bottle
 import sqlite3
-import uuid
+import random
+
 
 def open_connection():
-    """Open database connection."""
+    """Open database connection"""
     db_file = "kuldvillak.db"
     db = sqlite3.connect(db_file)
-    
+
     return db, db.cursor()
 
-def close_connection(db, connection, commit):
-    """Close database connection."""
-    if commit:
-        db.commit()
+
+def close_connection(db, connection):
+    """Close database connection"""
     connection.close()
     db.close()
 
-@bottle.route("/", method = ["GET", "POST"])
+
+def get_random_topics(topics, chosen_topics):
+    """Replace not chosen topics with random topics"""
+    for i, topic in enumerate(chosen_topics):
+        if not topic:
+            selectedtopic = random.choice(topics)[0]
+            while selectedtopic in chosen_topics:
+                selectedtopic = random.choice(topics)[0]
+
+            chosen_topics[i] = selectedtopic
+
+    return chosen_topics
+
+@bottle.route("/")
 def first_page():
-    """Create player and game board."""
-    player_id = bottle.request.get_cookie("player")
-    
-    if bottle.request.forms.mangija1:
-        db, connection = open_connection()
-        
-        tabel = []        
-        player_id = str(uuid.uuid4())
-        bottle.response.set_cookie("player", player_id, path="/")
-        
-        valitud_teemad = connection.execute("""SELECT Pealkiri FROM Teemad
-                                    ORDER BY RANDOM() LIMIT 5""").fetchall()
-        tabel.append(valitud_teemad)
-        
-        seis = [teema[0] for teema in valitud_teemad]
-        
-        for hind in range(10, 60, 10):
-            rida = []
-            for teema in valitud_teemad:
-                hind_kysimus = connection.execute("""SELECT Hind, KysimuseId from Kysimused
+    """Create player and game board"""
+    db, connection = open_connection()
+
+    topics = connection.execute("""SELECT Pealkiri FROM Teemad ORDER BY Pealkiri ASC""").fetchall()
+
+    if bottle.request.GET.get("player0"):
+        new_game = {}
+        playercount = bottle.request.GET.get("playerCount", type = int)
+        scores = [{bottle.request.query.getunicode("player{}".format(i)): 0} for i in range(playercount)]
+
+        if bottle.request.GET.get("topicsType") == "random":
+            chosen_topics = random.sample(topics, 5)
+            chosen_topics = [topic[0] for topic in chosen_topics]
+        else:
+            chosen_topics = [(bottle.request.query.getunicode("select{}".format(i)),)[0] for i in range(5)]
+            chosen_topics = get_random_topics(topics, chosen_topics)
+
+        new_game["0"] = chosen_topics
+
+        for price in range(10, 60, 10):
+            row = []
+            for topic in chosen_topics:
+                topic = connection.execute("""SELECT KysimuseId from Kysimused
                                         JOIN Teemad ON Kysimused.TeemaId = Teemad.TeemaId
                                         WHERE Pealkiri = ? AND Hind = ?
-                                        ORDER BY RANDOM() LIMIT 1""", (teema[0], hind)).fetchall()[0]
-                                            
-                seis.append(str(hind_kysimus[1]))
-                rida.append(hind_kysimus)
-            tabel.append(rida)
-            
-        seis = ";".join(seis)
-        connection.execute("""INSERT INTO Mangijad(MangijaId, Nimi, Seis)
-                    VALUES(?, ?, ?)""", (player_id, bottle.request.forms.mangija1, seis))
-        
-        close_connection(db, connection, True)
+                                        ORDER BY RANDOM() LIMIT 1""", (topic, price)).fetchall()[0]
 
-        return bottle.template("views/kuldvillak", rows = tabel, skoor = 0, hind = 0)
-    
-    elif player_id:
-        db, connection = open_connection()
-        player_info = connection.execute("""SELECT Nimi, Lopp FROM Mangijad
-                                WHERE MangijaId = ?""", (player_id,)).fetchall()[0]
-        close_connection(db, connection, False)
-        
-        if player_info[1] == 0:
-            # return the first page with continue game button
-            return bottle.template("views/greet", player_name = player_info[0], cont = True)
-        else:
-            return bottle.template("views/greet", cont = False)
+                row.append(topic[0])
+            new_game[str(price)] = row
 
-    return bottle.template("views/greet", cont = False)
+        new_game["players"] = scores
+        new_game["type"] = "auto"
 
-@bottle.route("/kuldvillak", method = ["GET", "POST"])
+        close_connection(db, connection)
+
+        return bottle.template("kuldvillak", new_gametable = new_game, newgame = "y")
+
+    close_connection(db, connection)
+
+    return bottle.template("greet", topics = topics)
+
+
+@bottle.route("/kuldvillak/")
+@bottle.route("/kuldvillak")
 def game_board():
-    """Kuldvillaku pealeht"""
-    player_id = bottle.request.get_cookie("player")
-    
-    if player_id:
-        db, connection = open_connection()
-        
-        tabel = []
-        
-        skoor, seis = connection.execute("""SELECT Skoor, Seis from Mangijad
-                            WHERE MangijaId = ?""", (player_id,)).fetchall()[0]
-        seis = seis.split(";")
-        
-        temp_tabel, redirect = [], True
-        for nr, question_id in enumerate(seis, start = 1):
-            if question_id == "": # answered question
-                temp_tabel.append("")
-            elif nr < 6: # category title
-                temp_tabel.append((question_id,))
-            else:
-                kys = connection.execute("""SELECT Hind, KysimuseId FROM Kysimused
-                                    JOIN Teemad ON Kysimused.TeemaId = Teemad.TeemaId
-                                    WHERE KysimuseId = ?""", (int(question_id),)).fetchall()[0]
-                temp_tabel.append(kys)
-                redirect = False
-            if nr % 5 == 0: # end of category
-                tabel.append(temp_tabel)
-                temp_tabel = []
-                
-        if redirect: # all questions answered
-            connection.execute("""UPDATE Mangijad SET Lopp = 1
-                        WHERE MangijaId = ?""", (player_id, ))
-            db.commit()
-            bottle.redirect("/results")
-        
-        if bottle.request.forms.hind:
-            hind = int(bottle.request.forms.hind)
-            if bottle.request.forms.sub:
-                skoor -= hind
-            elif bottle.request.forms.add:
-                skoor += hind
-            connection.execute("""UPDATE Mangijad SET Skoor = ?
-                        WHERE MangijaId = ?""", (skoor, player_id))
-            db.commit()
-        
-        close_connection(db, connection, False)
-    else:
-        bottle.redirect("/")
-        
-    return bottle.template("views/kuldvillak", rows = tabel, skoor = skoor)
-    
-@bottle.route("/q", method = "POST")
-def question_page():
-    """Küsimuse leht"""
-    db, connection = open_connection()
-    
-    player_id = bottle.request.get_cookie("player")
-    question_id = bottle.request.forms.kys_id
-    kysimus, hind, vastus = connection.execute("""SELECT Kys, Hind, Vastus FROM Kysimused
-                        WHERE KysimuseId = ?""", (int(question_id),)).fetchall()[0]
-        
-    seis = connection.execute("""SELECT Seis FROM Mangijad
-                        WHERE MangijaId = ?""", (player_id,)).fetchall()[0][0]
-    seis = seis.split(";")
-    q_id = seis.index(question_id)
-    seis[q_id] = ""
-    seis = ";".join(seis)
-    connection.execute("""UPDATE Mangijad SET Seis = ?
-                WHERE MangijaId = ?""", (seis, player_id))
-    
-    close_connection(db, connection, True)
-    
-    return bottle.template("views/question", kysimus = kysimus, vastus = vastus, hind = hind)
+    """Game page"""
 
-@bottle.route("/results")
-def results():
-    """Show results and leaderboard."""
+    return bottle.template("kuldvillak", new_gametable = [], newgame = "n")
+
+
+@bottle.route("/kuldvillak/questions/<id:int>")
+def get_question(id):
+    """Get question from the database by id"""
+
     db, connection = open_connection()
-    
-    leaderboard = connection.execute("""SELECT Nimi, Skoor FROM Mangijad
-                                WHERE Lopp = 1 ORDER BY Skoor DESC LIMIT 10""").fetchall()
-                                
-    close_connection(db, connection, False)
-    
-    return bottle.template("views/results", top = leaderboard)
+
+    question, answer = connection.execute("""SELECT Kys, Vastus from Kysimused
+                            WHERE KysimuseId = ?""", (id,)).fetchall()[0]
+
+    close_connection(db, connection)
+
+    return {"question": question, "answer": answer}
+
+
+@bottle.route("/kuldvillak/questions", method = "POST")
+def post_question():
+    """Add question to the database"""
+    db, connection = open_connection()
+
+    data = bottle.request.json
+    connection.execute("""INSERT INTO Kysimused (Kys, Hind, Vastus, TeemaId)
+        VALUES(?, ?, ?, (SELECT TeemaId FROM Teemad WHERE Pealkiri is ?))""",
+        (data["question"].upper(), data["price"], data["answer"].upper(), data["topic"]))
+    db.commit()
+
+    close_connection(db, connection)
+
+    return data
+
+
+@bottle.route("/kuldvillak/create")
+def create_game():
+    """Create game"""
+    if bottle.request.query.pealkiri:
+        new_game = {}
+        headlines = [headline.encode("iso-8859-1").decode("utf-8").upper() for headline in bottle.request.query.getall("pealkiri")]
+        new_game["0"] = headlines
+        playercount = bottle.request.GET.get("playerCount", type = int)
+        scores = [{bottle.request.query.getunicode("player{}".format(i)): 0} for i in range(playercount)]
+
+        nr = 10
+        for i in range(1, 6):
+            rida =  bottle.request.query.getall("row" + str(i))
+            for j in range(10):
+                new_game[str(nr)] = [{rida[i].encode("iso-8859-1").decode("utf-8").upper():  rida[i + 1].encode("iso-8859-1").decode("utf-8").upper()} for i in range(0, 10, 2)]
+            nr += 10
+
+        new_game["players"] = scores
+        new_game["type"] = "manual"
+
+        return bottle.template("kuldvillak", new_gametable = new_game, newgame = "y")
+
+    return bottle.template("create_game")
+
+
+@bottle.route("/kuldvillak/db")
+def update_database():
+    """Create question"""
+    db, connection = open_connection()
+
+    topics = connection.execute("""SELECT Pealkiri FROM Teemad ORDER BY Pealkiri ASC""").fetchall()
+
+    close_connection(db, connection)
+
+    return bottle.template("update_database", topics = topics)
+
 
 @bottle.route("/static/<filename>")
 def server_static(filename):
-    """CSS and images."""
+    """CSS"""
     return bottle.static_file(filename, root = "static")
+
 
 @bottle.error(404)
 def page_not_found(code):
-    """ """
-    return "Page not found! Sorry."
+    """Page not found template"""
 
-bottle.debug(True)
-bottle.run(host = "localhost", reloader = True)
+    return "Lehekülge ei leitud."
+
+bottle.run(host = "localhost")

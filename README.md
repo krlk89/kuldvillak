@@ -9,7 +9,7 @@ Kuldvillaku veebimäng. Pane oma teadmised proovile!
 
 Sõltuvuste paigaldamiseks:
 
-    pip install bottle
+    pip install -r requirements.txt
 
 ## Pildid:
 ![Küsimuse leht](pics/game_table.png?raw=true)

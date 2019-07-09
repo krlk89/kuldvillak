@@ -1,86 +1,151 @@
+/* General */
+html {
+    font-family: Verdana;
+    background-color: #3a5fcd;
+    font-size: 1vw;
+}
+
+h1, h2, a, p, label, details {
+    font-size: 2rem;
+    color: white;
+}
+
+a {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+}
+
+
 /* First page */
-.greet {
-    
+#grid-container {
+    display: grid;
+    grid-template-columns: 20% 60% 20%;
+    grid-gap: 10px;
+    padding: 10px;
 }
 
-.greet input {
-    display: block;
+#header {
+    grid-column: 2 / 3;
+}
+#main {
+    grid-column: 2 / 3;
 }
 
-body {
-    background-color: blue;
+input[type="radio"] {
+    height: 30px;
+    width: 30px;
 }
+
+input[type="text"] {
+    font-size: 1rem;
+    display: inline-block;
+    padding: 5px;
+}
+
+.topicsRadioButtons {
+    display: inline;
+    margin-bottom: 15px;
+}
+
+select {
+    font-size: 1rem;
+    margin-bottom: 30px;
+    padding: 5px;
+}
+
+#players {
+    padding: 10px 5px;
+    margin-bottom: 10px;
+}
+
+#playerNames {
+    margin-bottom: 50px;
+}
+
+#topicsChooserDiv, #player1, #player2 {
+    display: none;
+}
+
 
 /* Game table */
-.button {
-	background-color: blue;
-	border: 5px solid black;
-	cursor: pointer;
-	color: #ffffff;
-	font-family: Courier New;
-	font-size: 20px;
-	font-weight: bold;
-	height: 80px;
-	width: 175px;
+#question {
+    display: none;
+    border: solid 1px;
+    font-size: 4rem;
+    text-align: center;
+    height: 50vh;
 }
 
-#title {
+#answerButtons {
+    display: none;
+    justify-items: center;
+}
+
+
+.answerButton {
+	height: 13vh;
+	width: 10vw;
+	font-size: 10vmin;
+	cursor: pointer;
+}
+
+.add {
+    background-color: green;
+}
+.add:hover:enabled {
+    background-color: #32cd32;
+}
+
+.sub {
+    background-color: red;
+}
+.sub:hover:enabled {
+    background-color: #f53229;
+}
+.sub:disabled, .add:disabled {
     cursor: default;
 }
 
-#content:hover {
+table {
+    width: 100%;
+    text-align: center;
+}
+td {
+    height: 10vh;
+}
+
+.button {
+	background-color: #4169e1;
+	border: 4px solid black;
+	cursor: pointer;
+	color: #ffffff;
+	font-size: 2rem;
+	font-weight: bold;
+	height: 10vh;
+	width: 15vw;
+	white-space: normal;
+}
+
+.title {
+    cursor: default;
+}
+
+.content:hover {
 	background-color: #6837db;
 }
 
 #hidden {
     background: transparent;
     border: none;
-    font-size:0;
-    cursor: auto;
+    font-size: 0;
+    cursor: default;
 }
 
-th {
-    text-align: left;
-}
 
-h1, h2, p, a {
-    color: white;
-}
-
-a, p {
-    font-size: 20px;
-}
-
-/* Question page */
-div {
-    text-align: center;
-}
-
-#question {
-    height: 500px;
-    width: 1000px;
-    font-size: 62px;
-    white-space: normal;
-}
-
-.btn {
-	height: 75px;
-	width: 100px;
-	font-size: 42px;
-	color: white;
-}
-
-#add {
-    background-color: green;
-}
-
-#sub {
-    background-color: red;
-}
-
-/* Results page */
-.results {
-    font-size: 24px;
-    color: white;
-    padding: 10px;
+/* Media rules */
+@media (max-height: 525px) {
+    .button {
+        font-size: 4vmin;
+    }
 }
