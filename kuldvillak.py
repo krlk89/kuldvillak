@@ -128,12 +128,12 @@ def create_game():
         playercount = bottle.request.GET.get("playerCount", type = int)
         scores = [{bottle.request.query.getunicode("player{}".format(i)): 0} for i in range(playercount)]
 
-        nr = 10
+        price = 10
         for i in range(1, 6):
-            rida =  bottle.request.query.getall("row" + str(i))
+            row =  bottle.request.query.getall("row" + str(i))
             for j in range(10):
-                new_game[str(nr)] = [{rida[i].encode("iso-8859-1").decode("utf-8").upper():  rida[i + 1].encode("iso-8859-1").decode("utf-8").upper()} for i in range(0, 10, 2)]
-            nr += 10
+                new_game[str(price)] = [{row[i].encode("iso-8859-1").decode("utf-8").upper():  row[i + 1].encode("iso-8859-1").decode("utf-8").upper()} for i in range(0, 10, 2)]
+            price += 10
 
         new_game["players"] = scores
         new_game["type"] = "manual"
